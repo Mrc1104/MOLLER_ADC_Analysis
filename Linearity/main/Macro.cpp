@@ -114,35 +114,32 @@ Signal_tStmp Find_Valid_Signal_Range(ROOT::RNTupleReader* Reader, SOFTWARE_CHANN
 
 int main(int argc, char** argv)
 {
-	// Standalone
-	TApplication app("app", &argc, argv);
+	auto cResidualMeans      = std::make_unique<TCanvas>("ResidualMeans");
+	auto gResidualMeans = std::make_unique<TGraphErrors>();
 
-	TCanvas *cResidualMeans      = new TCanvas();
-	TGraphErrors* gResidualMeans = new TGraphErrors();
-
-	TCanvas *cResidual = new TCanvas("Residual");
-	cResidual->cd(2);
-	TGraph  *gResidual[2];
+	auto cResidual = std::make_unique<TCanvas>("Residual");
+	cResidual->Divide(2);
+	std::unique_ptr<TGraph> gResidual[2];
 	for(int i = 0; i < 2; i++) {
-		gResidual[i] = new TGraph();
+		gResidual[i] = std::make_unique<TGraph>();
 	}
 
-	TCanvas *cIntercept = new TCanvas("intercept");
-	TGraphErrors *gIntercept = new TGraphErrors();
+	auto cIntercept = std::make_unique<TCanvas>("intercept");
+	auto gIntercept = std::make_unique<TGraphErrors>();
 
-	TCanvas *cSlope = new TCanvas("slope");
-	TGraphErrors *gSlope = new TGraphErrors();
+	auto cSlope = std::make_unique<TCanvas>("slope");
+	auto gSlope = std::make_unique<TGraphErrors>();
 
 
-	TCanvas *cRange =  new TCanvas("cRange");
+	auto cRange =  std::make_unique<TCanvas>("cRange");
 	cRange->Divide(2);
-	TGraph  *gRange[2];
+	std::unique_ptr<TGraph> gRange[2];
 	for(int i = 0; i < 2; i++) {
-  		gRange[i] = new TGraph();
+  		gRange[i] = std::make_unique<TGraph>();
 	}
 
 
-
+	auto fsave = std::make_unique<TFile>("LinearityStats.root", "RECREATE");
 
 	for(int i = 0; i < 2; i++) {
 		SOFTWARE_CHANNEL chan = (SOFTWARE_CHANNEL)i;
@@ -162,9 +159,9 @@ int main(int argc, char** argv)
 			const auto& tStmp    = data(entry).tStmp;
 			if(tStmp[tStmp.size()-1] < extrema.min) continue;
 			for(size_t index = 0; index < ch_data.size(); index++) {
-				if(tStmp[index] >= extrema.min && tStmp[index] <= extrema.max) {
+				if(tStmp[index] >= extrema.min-10 && tStmp[index] <= extrema.max+10) {
 					gRange[chan]->AddPoint(tStmp[index], ch_data[index]);
-					if(tStmp[index] >= 1.02*extrema.min && tStmp[index] <= 0.98*extrema.max) {
+					if(tStmp[index] >= extrema.min && tStmp[index] <= extrema.max) {
 						voltage.push_back( ch_data[index] );
 						timestamps.push_back( tStmp[index] );
 					}
@@ -175,7 +172,7 @@ int main(int argc, char** argv)
 		gRange[chan]->Draw("AP");
 
 		// Fit with the exact range we care about
-		TF1* fit = new TF1(Form("fit_soft_chan%d", chan), "pol1", 1.02*extrema.min, 0.98*extrema.max);
+		TF1* fit = new TF1(Form("fit_soft_chan%d", chan), "pol1", extrema.min, extrema.max);
 		gRange[chan]->Fit(fit, "R");
 
 		// Draw slope vs Chan
@@ -210,6 +207,7 @@ int main(int argc, char** argv)
 		average_residual /= residual_counter;
 		double rms_residual = GetRMS(voltage, average_residual);
 
+		gResidual[chan]->SetTitle(Form("Residual Vs Chan%d;Chan %d; Residual", chan, chan));
 		gResidual[chan]->Draw("AP");	
 		std::cout << "Avg Residual: " << average_residual << "\n";
 		std::cout << "RMS: " << rms_residual << "\n";
@@ -221,12 +219,23 @@ int main(int argc, char** argv)
 		gResidualMeans->Draw("AP");
 	}
 
-	TCanvas *c = new TCanvas();
-	TRootCanvas *rc = (TRootCanvas *)c->GetCanvasImp();
-	rc->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
-	app.Run();
-	
+	cResidualMeans->Write("cResidual");
+	// gResidualMeans->Write();
+
+	cResidual->Write();
+	for(int i = 0; i < 2; i++) {
+		// gResidual[i]->Write();
+	}
+
+	cIntercept->Write("cIntercept");
+	// gIntercept->Write();
+
+	cSlope->Write("cSlope");
+	// gSlope->Write();
 
 
-
+	cRange->Write("cRange");
+	for(int i = 0; i < 2; i++) {
+  		// gRange[i]->Write();
+	}
 }
