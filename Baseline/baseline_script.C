@@ -68,6 +68,7 @@ void baseline_script(std::vector<int> runList, std::vector<std::pair<int, int>> 
 	}
 
 	// Define a Data Frame to hold the fit results
+	/*
 	ROOT::RDataFrame fit_results(TOTAL_CHANNELS);
 	auto fit_result_columns = fit_results.Define("ADC_Chan"      , [ ](    int chan     ) { return         chan             ; })
 										 .Define("Amplitude"     , [=](TFitResultPtr ptr) { return ptr->Parameter(AMPLITUDE); })
@@ -76,25 +77,25 @@ void baseline_script(std::vector<int> runList, std::vector<std::pair<int, int>> 
 										 .Define("MeanError"     , [=](TFitResultPtr ptr) { return ptr->ParError (  MEAN   ); })
 										 .Define("RMS"           , [=](TFitResultPtr ptr) { return ptr->Parameter(  RMS    ); })
 										 .Define("RMSError"      , [=](TFitResultPtr ptr) { return ptr->ParError (  RMS    ); });
-
-	/*
+	*/
 	auto chistograms = std::make_unique<TCanvas>();
 	divide_canvas_algorithm(*chistograms, TOTAL_CHANNELS);
-	// auto gMean = std::make_unique<TGraphErrors>(TOTAL_CHANNELS);
-	// auto gRMS  = std::make_unique<TGraphErrors>(TOTAL_CHANNELS);
+	auto gMean = std::make_unique<TGraphErrors>(TOTAL_CHANNELS);
+	auto gRMS  = std::make_unique<TGraphErrors>(TOTAL_CHANNELS);
 	unsigned entry = 0, chan = 0, chan_index = 0;
 	for( auto h : histograms ) {
 		auto pad = entry + 1;
 		chistograms->cd(pad);
+		h->Draw();
 		auto fitresult = h->Fit("gaus", "QS");
 
 		auto channel = (chan) ? adc_chan[chan_index].second : adc_chan[chan_index].first;
 
 		// Construct TGraph
-		// gMean->SetPoint(   entry  , channel, fitresult->Parameter(MEAN));
-		// gMean->SetPointError(entry,       0, fitresult->ParError(MEAN) );
-		// gRMS ->SetPoint(   entry  , channel, fitresult->Parameter(RMS) );
-		// gRMS ->SetPointError(entry,       0, fitresult->ParError(RMS)  );
+		gMean->SetPoint(   entry  , channel, fitresult->Parameter(MEAN));
+		gMean->SetPointError(entry,       0, fitresult->ParError(MEAN) );
+		gRMS ->SetPoint(   entry  , channel, fitresult->Parameter(RMS) );
+		gRMS ->SetPointError(entry,       0, fitresult->ParError(RMS)  );
 
 		std::string hname = Form("ADC Chan %d; Chan %d [soft. chan]; Cts", channel, chan);
 		h->SetTitle(hname.c_str());
@@ -106,20 +107,31 @@ void baseline_script(std::vector<int> runList, std::vector<std::pair<int, int>> 
 	}
 
 	// Draw TGraphs
-	// auto cStats = std::make_unique<TCanvas>("cStats");
-	// cStats->Divide(1,2);
-	// ConfigureTGraph(*gMean, std::string("Mean Vs ADC Chan; ADC Chan; Mean [V]"));
-    // ConfigureTGraph(*gRMS,  std::string("RMS Vs ADC Chan; ADC Chan; RMS [V]"  ));
+	auto cStats = std::make_unique<TCanvas>("cStats");
+	cStats->Divide(1,2);
+	ConfigureTGraph(*gMean, std::string("Mean Vs ADC Chan; ADC Chan; Mean [V]"));
+    ConfigureTGraph(*gRMS,  std::string("RMS Vs ADC Chan; ADC Chan; RMS [V]"  ));
 
-	// cStats->cd(1);
-	// gMean ->Draw("AP");
-	// cStats->cd(2);
-	// gRMS  ->Draw("AP");
+	cStats->cd(1);
+	gMean ->Draw("AP");
+	cStats->cd(2);
+	gRMS  ->Draw("AP");
 
 	cStats->Print("stats.ps");
 	chistograms->Print("hists.ps");
 
-	*/
+	auto fsave = std::make_unique<TFile>("Baseline.root", "RECREATE");
+	gMean->Write("Mean");
+	gRMS->Write("RMS");
+	cStats->Write("cStats");
+	chistograms->Write("cHistograms");
+
+	auto dir_hists = fsave->mkdir("Histograms");
+	dir_hists->cd();
+	for( auto h : histograms ) h->Write(h->GetTitle());
+
+
+
 
 
 	return;
