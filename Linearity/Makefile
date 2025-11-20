@@ -1,4 +1,4 @@
-PROJECT := Example
+PROJECT := Linearity
 
 # Directory Structure
 EXE_DIR:=main
