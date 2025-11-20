@@ -48,7 +48,7 @@ void baseline_script(std::vector<int> runList, std::vector<std::pair<int, int>> 
 		throw std::runtime_error("Mismatch adc_channel entries and run entries!");
 
 	ofstream fcsv(outfile+".csv");
-	fcsv << "ADC_Chan,Mean,Std\n";
+	fcsv << "#ADC_Chan,Mean,Std\n";
 
 	// ROOT::RDataFrame df(TTREE_NAME, Form(PATTERN, 17));
 	std::vector<ROOT::RDataFrame> dataframes;
