@@ -31,6 +31,7 @@
 *.la
 *.a
 *.lib
+*/lib/*
 
 # Executables
 *.exe
@@ -39,3 +40,6 @@
 
 # debug information files
 *.dwo
+
+# Rootfiles
+*.root
