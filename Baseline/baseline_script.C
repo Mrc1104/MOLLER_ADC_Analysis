@@ -1,6 +1,8 @@
 #include <fstream>
 #include <memory>
 
+// Example: root 'baseline_script.C({16,17,18,26,29,21,22,24},{{1,2},{3,4},{5,6},{7,8},{9,10},{11,12},{13,14},{15,16}})'
+
 static constexpr unsigned TOTAL_CHANNELS = 16;
 static constexpr unsigned CHAN_PER_RUN   =  2;
 static const char*        TTREE_NAME     = "DataTree";
@@ -46,7 +48,7 @@ void baseline_script(std::vector<int> runList, std::vector<std::pair<int, int>> 
 		throw std::runtime_error("Mismatch adc_channel entries and run entries!");
 
 	ofstream fcsv(outfile+".csv");
-	fcsv << "Run,Soft_Chan,ADC_Chan,Mean,Std\n";
+	fcsv << "ADC_Chan,Mean,Std\n";
 
 	// ROOT::RDataFrame df(TTREE_NAME, Form(PATTERN, 17));
 	std::vector<ROOT::RDataFrame> dataframes;
@@ -67,17 +69,6 @@ void baseline_script(std::vector<int> runList, std::vector<std::pair<int, int>> 
 		ROOT::RDF::RunGraphs(  handlers );
 	}
 
-	// Define a Data Frame to hold the fit results
-	/*
-	ROOT::RDataFrame fit_results(TOTAL_CHANNELS);
-	auto fit_result_columns = fit_results.Define("ADC_Chan"      , [ ](    int chan     ) { return         chan             ; })
-										 .Define("Amplitude"     , [=](TFitResultPtr ptr) { return ptr->Parameter(AMPLITUDE); })
-	                                     .Define("AmplitudeError", [=](TFitResultPtr ptr) { return ptr->ParError (AMPLITUDE); })
-										 .Define("Mean"          , [=](TFitResultPtr ptr) { return ptr->Parameter(  MEAN   ); })
-										 .Define("MeanError"     , [=](TFitResultPtr ptr) { return ptr->ParError (  MEAN   ); })
-										 .Define("RMS"           , [=](TFitResultPtr ptr) { return ptr->Parameter(  RMS    ); })
-										 .Define("RMSError"      , [=](TFitResultPtr ptr) { return ptr->ParError (  RMS    ); });
-	*/
 	auto chistograms = std::make_unique<TCanvas>();
 	divide_canvas_algorithm(*chistograms, TOTAL_CHANNELS);
 	auto gMean = std::make_unique<TGraphErrors>(TOTAL_CHANNELS);
@@ -103,6 +94,9 @@ void baseline_script(std::vector<int> runList, std::vector<std::pair<int, int>> 
 			chan = 0;
 			chan_index++;
 		}
+
+		// Write to CSV
+		fcsv << channel  << "," << fitresult->Parameter(MEAN) << "," << fitresult->Parameter(RMS) << std::endl;
 		entry++;
 	}
 
