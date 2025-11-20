@@ -17,8 +17,8 @@ OBJFILES := $(notdir $(OBJECTS))
 FILES := $(notdir $(basename $(OBJECTS)))
 
 
-LIB:=-L /lib/x86_64-linux-gnu/ -L../coda3-decoder/
-INC:=-I./ -I./include -I../coda3-decoder
+LIB:=-L /lib/x86_64-linux-gnu/ -L../../coda3-decoder/
+INC:=-I./ -I./include -I../../coda3-decoder
 ROOT:=`root-config --glibs --cflags`
 
 DICT_NAME:=$(LIB_DIR)/dict.cc
