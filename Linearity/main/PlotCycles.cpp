@@ -98,7 +98,6 @@ int main()
 					(*g)->SetMarkerColor(*c);
 					c++;
 				}
-				double time_shift = tStmp[index] - ref_time;
 				(*g)->AddPoint(tStmp[index], chdata[index]);
 				RampHist->Fill(chdata[index]/LSB);
 			 }
