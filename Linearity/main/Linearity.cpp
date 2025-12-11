@@ -100,7 +100,7 @@ int main()
 	auto Reader = ROOT::RNTupleReader::Open(KEY_NAME,Form(PATTERN, 141));
 	Reader->EnableMetrics();
 
-	ROOT::RNTupleView<tDataSamples> Data = Reader->GetView<tDataSamples>(BRANCH_NAME);
+	ROOT::RNTupleView<tDataSamples> Data = Reader->GetView<tDataSamples>(SAMPLE_BRANCH_NAME);
 
 	EColor colors[] = {
 		kRed, kBlue, kGreen, kOrange, kBlack,
@@ -113,6 +113,7 @@ int main()
 	auto const *c = colors;
 	std::vector<TGraph*> plots;
 	auto g = plots.emplace_back(new TGraph());
+	auto gINL = std::make_unique<TGraph>();
 
 	auto RampHist = std::make_unique<TH1F>("Ramp", "Ramp Histogram; LSB; Cts", NBINS, LOWER_BIN, UPPER_BIN);
 	double pedestal = baseline.GetMean(1);
@@ -130,7 +131,7 @@ int main()
 				end_loop = true;
 				break;
 			}
-			if( tStmp[index] >= start_time && tStmp[index] <= 5*time_incr+start_time ) {
+			if( tStmp[index] >= start_time && tStmp[index] <= 2*time_incr+start_time ) {
 				// I want time_shift to be bounded between 0.0ms and 250ms
 				if( tStmp[index] >= (ref_time+time_incr) ) {
 					ref_time = tStmp[index];
@@ -140,9 +141,13 @@ int main()
 					c++;
 				}
 				double time_shift = tStmp[index] - ref_time;
-				double voltage =FCN_GEN_MSEC_TO_V*(-1*sign*time_shift)+sign*FCN_GEN_MAX;
-				g->AddPoint((chdata[index]-pedestal)/LSB, voltage);
-				RampHist->Fill(chdata[index]/LSB);
+				double voltage    = FCN_GEN_MSEC_TO_V*(-1*sign*time_shift)+sign*FCN_GEN_MAX;
+				double adc_unit   = (chdata[index]-pedestal) / LSB;
+				g->AddPoint(adc_unit, voltage);
+				RampHist->Fill(adc_unit);
+
+				// double inl = chdata[index] - voltage;
+				// gINL->AddPoint(voltage, inl);
 			 }
 
 		}
@@ -175,40 +180,16 @@ int main()
 	double gain_error  = fit->GetParameter("Slope") - LSB;
 
 	INL inl(RampHist.get());
-	inl.SetGainError(gain_error);
-	inl.SetOffsetError(offset_error);
-
 	auto hDNL = inl.GetDNL();
 	hDNL->Write("hDNL");
-	auto hINL = inl.GetINL();
-	hINL->Write("hINL");
+
+	auto avgDNL = inl.GetAvgDNL();
+	avgDNL->Write("AvgDNL");
 
 
-	/*
-	// Calculate DLE with the Histogram
-	// 1) Get The average bin_height for bins 1 - 2^{n}-2
-	// // Binning Convention
-	// // bin = 0 ; // underflow
-	// // bin = 1 ; // first bin (low edge is xlow included)
-	// // bin = nbins; // last bin )upper edge is xup exlcuded)
-	// // bin = nbins+1; // overflow
-	double avg_bin_value = GetMeanFromHistogram(RampHist.get(), 2, NBINS-2);
-
-	// 2) DLE[0]] = DLE[2^{n}-1] = 0
-	auto gDLE = std::make_unique<TGraph>();
-	std::cout << "avg_bin_value: " << avg_bin_value << std::endl;
-	for(size_t bin = 1; bin <= NBINS; bin++) {
-		if(bin == 1 || bin == NBINS) {
-			gDLE->AddPoint(LOWER_BIN+0.5+bin, 0);
-		} else {
-			double dle = RampHist->GetBinContent(bin) / avg_bin_value  - 1;
-			gDLE->AddPoint(LOWER_BIN+0.5+bin, dle);
-		}
-	}
-	gDLE->SetTitle("DLE; ADC Units; ");
-	gDLE->Write("gDLE");
 
 	// Get ILE
+	/*
 	size_t counter = 0;
 	auto gILE = std::make_unique<TGraph>();
 	for( TObject *obj : *gPlot->GetListOfGraphs() ) {
@@ -224,9 +205,9 @@ int main()
 			}
 		}
 	}
-	gILE->SetTitle("ILE; ADC Units; Ideal - Fit");
-	gILE->Write("gILE");
 	*/
+	gINL->SetTitle("INL; ADC Units; Ideal - V_{in} [V]");
+	gINL->Write("gINL");
 	
 
 	return 0;

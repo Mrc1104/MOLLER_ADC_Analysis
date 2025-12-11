@@ -65,7 +65,7 @@ int main()
 	auto Reader = ROOT::RNTupleReader::Open(KEY_NAME,Form(PATTERN, 141));
 	Reader->EnableMetrics();
 
-	ROOT::RNTupleView<tDataSamples> Data = Reader->GetView<tDataSamples>(BRANCH_NAME);
+	ROOT::RNTupleView<tDataSamples> Data = Reader->GetView<tDataSamples>(SAMPLE_BRANCH_NAME);
 
 	EColor colors[] = {kRed, kBlue, kGreen, kOrange, kBlack, kRed, kBlue, kGreen, kOrange, kBlack, kRed, kBlue, kGreen, kOrange, kBlack, kRed, kBlue, kGreen, kOrange, kBlack, kRed, kBlue, kGreen, kOrange, kBlack, kRed, kBlue, kGreen, kOrange, kBlack};
 	auto const *c = colors;
