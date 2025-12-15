@@ -8,82 +8,47 @@
 
 #include <memory>
 #include <array>
+#include <vector>
 
 #include "DataSmpl.h"
+#include "StreamingChannelData.h"
 
 constexpr size_t NCHANS = 2;
 const char *PATTERN = "./Input/molleradc_%d.root";
+
 int main()
 {
-	
-	auto Reader = ROOT::RNTupleReader::Open("DataTree", Form(PATTERN, 182));
-
-
-	auto canvas = std::make_unique<TCanvas>("Channel Data");
-	std::array<std::unique_ptr<TGraph>, NCHANS> graphs = {
-		std::make_unique<TGraph>(),
-		std::make_unique<TGraph>()
+	struct rundata_t
+	{
+		int run;
+		std::array<size_t, StreamingChannelData::adc_channels_t::N_ADC_CHANNELS> channels;
 	};
-	std::array<std::unique_ptr<TGraph>, NCHANS> graphs_gated = {
-		std::make_unique<TGraph>(),
-		std::make_unique<TGraph>()
+	std::array<rundata_t, 8> runList= {
+		//{runnumber,adc_chan_0, adc_chan_1}
+		rundata_t{182,  1, 2},
+		rundata_t{184,  3, 4},
+		rundata_t{188,  5, 6},
+		rundata_t{189,  7, 8},
+		rundata_t{190,  9,10},
+		rundata_t{194, 11,12},
+		rundata_t{195, 13,14},
+		rundata_t{196, 15,16}
 	};
-	canvas->Divide(1,NCHANS);
 
-	auto stream_data = Reader->GetView<tDataSamples>(SAMPLE_BRANCH_NAME);
-	for( auto entry : Reader->GetEntryRange() ) {
-		const auto& chan0 = stream_data(entry).ch0_data;
-		const auto& chan1 = stream_data(entry).ch1_data;
-		const auto& tStmp = stream_data(entry).tStmp;
-		const auto& gate1 = stream_data(entry).gate1;
-	
-		for(size_t index = 0; index < tStmp.size(); index++) {
-			const auto& time = tStmp[index];
-			const auto& ch0  = chan0[index];
-			const auto& ch1  = chan1[index];
-			const auto& gate = gate1[index];
+	auto fsave = std::make_shared<TFile>("./Output/Channel_Data.root", "RECREATE");
+	for(const auto& rundata : runList) {
+		auto run = rundata.run;
+		auto chan= rundata.channels;
 
-			graphs[0]->AddPoint(time, ch0);
-			graphs[1]->AddPoint(time, ch1);
-			if(gate) {
-				graphs_gated[0]->AddPoint(time, ch0);
-				graphs_gated[1]->AddPoint(time, ch1);
-			}
-		}
+		std::cout << "Generating Plots for run: " << run << " {" << chan[0] << ", " << chan[1] << "}\n";
+		StreamingChannelData data(fsave->mkdir( Form("run%d_%zu_%zu",run, chan[0], chan[1])  )
+		                         , ROOT::RNTupleReader::Open("DataTree", Form(PATTERN, run))
+								 , chan
+								 );
+		data.ReadChannelData();
+		data.SavePlots();
 	}
 
-	std::array<std::unique_ptr<TMultiGraph>, NCHANS> multi_graphs = {
-		std::make_unique<TMultiGraph>(),
-		std::make_unique<TMultiGraph>()
-	};
-	std::array<std::unique_ptr<TLegend>, NCHANS> legends = {
-		std::make_unique<TLegend>(0.6, 0.2, 0.8, 0.4),
-		std::make_unique<TLegend>(0.6, 0.2, 0.8, 0.4)
-	};
 
-	auto fsave = std::make_unique<TFile>("./Output/Channel_Data.root", "RECREATE");
-	
-	for( size_t ch = 0 ; ch < NCHANS; ch++ ) {
-		int pad = ch + 1;
-		canvas->cd(pad);
-
-		graphs[ch]->SetLineColor(kBlue);
-		graphs[ch]->SetMarkerColor(kBlue);
-		graphs_gated[ch]->SetLineColor(kRed);
-		graphs_gated[ch]->SetMarkerColor(kRed);
-
-		legends[ch]->AddEntry(graphs[ch].get()      , Form("Chan %zu", ch), "LP");
-		legends[ch]->AddEntry(graphs_gated[ch].get(),        "gate1"     ,  "LP");
-
-		multi_graphs[ch]->Add(graphs[ch].release()      , "AP");
-		multi_graphs[ch]->Add(graphs_gated[ch].release(), "AP");
-		multi_graphs[ch]->Draw("A");
-		legends[ch]->Draw("SAME");
-	
-		multi_graphs[ch]->Write("Channel_Data");
-	}
-	canvas->Write("cChannel_Data");
-
-	fsave->Close(0);
 	return 0;
 }

@@ -6,7 +6,7 @@ File                |     ADC CHAN (ch0, ch1) | Comment
 molleradc\_182.root |      1,  2              |
 molleradc\_183.root |      1,  2              |
 molleradc\_184.root |      3,  4              |
-molleradc\_189.root |      5,  6              |
+molleradc\_188.root |      5,  6              |
 molleradc\_189.root |      7,  8              |
 molleradc\_190.root |      9, 10              | Likely bad, ADC crashed on END
 molleradc\_191.root |     11, 12              | Likely bad, ADC crashed on END
